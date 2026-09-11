@@ -168,8 +168,16 @@ header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   cursor: pointer;
   transition: all var(--transition);
+}
+
+.btn-text-badge {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .icon-btn:hover, .icon-btn:focus-visible {
@@ -177,6 +185,12 @@ header {
   background: var(--bg-secondary);
   border-color: var(--accent);
   outline: none;
+}
+
+.icon-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 main {

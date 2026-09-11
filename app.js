@@ -19,7 +19,10 @@ const state = {
   timerInterval: null,
   wakeLockSentinel: null,
   soundEnabled: true,
-  audioCtx: null
+  audioCtx: null,
+  lofiPlaying: false,
+  lofiInterval: null,
+  lofiGain: null
 };
 
 // Mode display names for accessibility and titles
@@ -41,6 +44,7 @@ const elements = {
   screenStatusPill: document.getElementById('screen-status-pill'),
   cycleStatusLabel: document.getElementById('cycle-status-label'),
   manualMinInput: document.getElementById('manual-min-input'),
+  lofiToggleBtn: document.getElementById('lofi-toggle-btn'),
   soundToggleBtn: document.getElementById('sound-toggle-btn'),
   soundOnIcon: document.getElementById('sound-on-icon'),
   soundOffIcon: document.getElementById('sound-off-icon'),
@@ -79,6 +83,102 @@ function playHarmonicChime() {
     });
   } catch (err) {
     console.warn('Audio error:', err);
+  }
+}
+
+// --- Procedural Lofi Ambient Engine (Web Audio API) ---
+// Warm low-pass filtered continuous 7th chord progressions for cognitive focus
+const LOFI_CHORDS = [
+  [174.61, 220.00, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
+  [164.81, 207.65, 246.94, 311.13], // Emaj7 (E3, G#3, B3, D#4)
+  [146.83, 174.61, 220.00, 261.63], // Dm7   (D3, F3, A3, C4)
+  [130.81, 164.81, 196.00, 246.94]  // Cmaj7 (C3, E3, G3, B3)
+];
+let currentChordIndex = 0;
+
+function ensureAudioContext() {
+  if (!state.audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) state.audioCtx = new AudioContext();
+  }
+  if (state.audioCtx && state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume();
+  }
+}
+
+function playLofiChord() {
+  if (!state.lofiPlaying || !state.audioCtx) return;
+
+  const ctx = state.audioCtx;
+  const now = ctx.currentTime;
+  const chord = LOFI_CHORDS[currentChordIndex];
+  currentChordIndex = (currentChordIndex + 1) % LOFI_CHORDS.length;
+
+  chord.forEach(function(freq, i) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    // Warm Rhodes / Electric Piano imitation (sine + triangle harmonic)
+    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(freq + (Math.random() * 0.4 - 0.2), now);
+
+    // Warm Lowpass filter typical of vinyl / tape lofi
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(480, now);
+    filter.Q.setValueAtTime(1.5, now);
+
+    // Slow gentle fade-in and long fade-out
+    const chordDuration = 3.6;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.035, now + 0.9);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + chordDuration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(state.lofiGain || ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + chordDuration + 0.1);
+  });
+}
+
+function startLofi() {
+  ensureAudioContext();
+  if (!state.audioCtx) return;
+
+  state.lofiPlaying = true;
+  if (!state.lofiGain) {
+    state.lofiGain = state.audioCtx.createGain();
+    state.lofiGain.gain.setValueAtTime(0.7, state.audioCtx.currentTime);
+    state.lofiGain.connect(state.audioCtx.destination);
+  }
+
+  elements.lofiToggleBtn.classList.add('active');
+  elements.lofiToggleBtn.setAttribute('aria-label', 'Desligar som ambiente Lofi');
+
+  playLofiChord();
+  if (state.lofiInterval) clearInterval(state.lofiInterval);
+  state.lofiInterval = setInterval(playLofiChord, 3400);
+}
+
+function stopLofi() {
+  state.lofiPlaying = false;
+  if (state.lofiInterval) {
+    clearInterval(state.lofiInterval);
+    state.lofiInterval = null;
+  }
+  if (elements.lofiToggleBtn) {
+    elements.lofiToggleBtn.classList.remove('active');
+    elements.lofiToggleBtn.setAttribute('aria-label', 'Ligar som ambiente Lofi');
+  }
+}
+
+function toggleLofi() {
+  if (state.lofiPlaying) {
+    stopLofi();
+  } else {
+    startLofi();
   }
 }
 
@@ -302,6 +402,9 @@ elements.manualMinInput.addEventListener('input', function(e) {
   }
 });
 
+if (elements.lofiToggleBtn) {
+  elements.lofiToggleBtn.addEventListener('click', toggleLofi);
+}
 elements.soundToggleBtn.addEventListener('click', toggleSound);
 elements.themeToggleBtn.addEventListener('click', toggleTheme);
 
@@ -323,6 +426,9 @@ window.addEventListener('keydown', function(e) {
   } else if (e.key === '3') {
     e.preventDefault();
     setMode('longBreak');
+  } else if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault();
+    toggleLofi();
   } else if (e.key === 'm' || e.key === 'M') {
     e.preventDefault();
     toggleSound();

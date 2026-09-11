@@ -64,11 +64,26 @@
 
   <!-- Conteúdo Principal -->
   <main>
-    <!-- Seleção de Modos -->
-    <nav class="mode-selector" role="tablist" aria-label="Modos do temporizador">
+    <!-- Seletor de Telas (Pomodoro vs Timer Simples) -->
+    <div class="view-switcher" role="tablist" aria-label="Tipo de Temporizador">
+      <button role="tab" id="view-pomodoro-btn" class="view-btn active" aria-selected="true">🍅 Pomodoro</button>
+      <button role="tab" id="view-timer-btn" class="view-btn" aria-selected="false">⏱️ Timer Simples</button>
+    </div>
+
+    <!-- TELA 1: Seleção de Modos Pomodoro (Ciclos de Foco e Pausas) -->
+    <nav id="pomodoro-modes-nav" class="mode-selector" role="tablist" aria-label="Modos do Pomodoro">
       <button role="tab" aria-selected="true" id="tab-focus" class="mode-btn active" data-mode="focus" data-minutes="25">Foco (25m)</button>
       <button role="tab" aria-selected="false" id="tab-short" class="mode-btn" data-mode="shortBreak" data-minutes="5">Pausa Curta (5m)</button>
       <button role="tab" aria-selected="false" id="tab-long" class="mode-btn" data-mode="longBreak" data-minutes="15">Pausa Longa (15m)</button>
+    </nav>
+
+    <!-- TELA 2: Presets Rápidos do Timer Simples (Estilo cronômetro/timer direto) -->
+    <nav id="simple-timer-modes-nav" class="mode-selector" style="display: none;" role="tablist" aria-label="Tempos Rápidos">
+      <button role="tab" class="mode-btn" data-timer-min="1">1 min</button>
+      <button role="tab" class="mode-btn active" data-timer-min="5">5 min</button>
+      <button role="tab" class="mode-btn" data-timer-min="10">10 min</button>
+      <button role="tab" class="mode-btn" data-timer-min="30">30 min</button>
+      <button role="tab" class="mode-btn" data-timer-min="60">1h</button>
     </nav>
 
     <!-- Visualização do Timer -->
@@ -100,9 +115,9 @@
 
     <!-- Painel de Ajuste Manual Direto -->
     <div class="custom-duration-panel">
-      <span>Duração do modo ativo:</span>
+      <span id="manual-label">Minutos personalizados:</span>
       <div class="custom-duration-inputs">
-        <input type="number" id="manual-min-input" class="duration-input" min="1" max="360" value="25" aria-label="Minutos para o modo selecionado" />
+        <input type="number" id="manual-min-input" class="duration-input" min="1" max="360" value="25" aria-label="Minutos personalizados" />
         <span class="mono">min</span>
       </div>
     </div>
@@ -113,7 +128,7 @@
     <div class="hints">
       <span><span class="kbd-badge">Espaço</span> Iniciar/Pausar</span>
       <span><span class="kbd-badge">R</span> Resetar</span>
-      <span><span class="kbd-badge">1-3</span> Modos</span>
+      <span><span class="kbd-badge">T</span> Telas</span>
       <span><span class="kbd-badge">L</span> Lofi</span>
       <span><span class="kbd-badge">M</span> Mudo</span>
     </div>

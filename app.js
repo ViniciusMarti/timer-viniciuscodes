@@ -6,12 +6,14 @@
 
 // Application State
 const state = {
+  activeView: 'pomodoro', // 'pomodoro' | 'timer'
   mode: 'focus',
   durations: {
     focus: 25 * 60,
     shortBreak: 5 * 60,
     longBreak: 15 * 60
   },
+  simpleTimerDuration: 5 * 60,
   status: 'idle',
   totalSeconds: 25 * 60,
   remainingSeconds: 25 * 60,
@@ -43,6 +45,11 @@ const elements = {
   screenStatusLabel: document.getElementById('screen-status-label'),
   screenStatusPill: document.getElementById('screen-status-pill'),
   cycleStatusLabel: document.getElementById('cycle-status-label'),
+  viewPomodoroBtn: document.getElementById('view-pomodoro-btn'),
+  viewTimerBtn: document.getElementById('view-timer-btn'),
+  pomodoroModesNav: document.getElementById('pomodoro-modes-nav'),
+  simpleTimerModesNav: document.getElementById('simple-timer-modes-nav'),
+  manualLabel: document.getElementById('manual-label'),
   manualMinInput: document.getElementById('manual-min-input'),
   lofiToggleBtn: document.getElementById('lofi-toggle-btn'),
   soundToggleBtn: document.getElementById('sound-toggle-btn'),
@@ -51,7 +58,8 @@ const elements = {
   themeToggleBtn: document.getElementById('theme-toggle-btn'),
   themeMoonIcon: document.getElementById('theme-moon-icon'),
   themeSunIcon: document.getElementById('theme-sun-icon'),
-  modeBtns: document.querySelectorAll('.mode-btn')
+  modeBtns: document.querySelectorAll('#pomodoro-modes-nav .mode-btn'),
+  simpleTimerBtns: document.querySelectorAll('#simple-timer-modes-nav .mode-btn')
 };
 
 // --- Web Audio API Chime (Soft, non-startling sine chord) ---
@@ -239,9 +247,10 @@ function formatTime(seconds) {
 function updateUI() {
   const timeText = formatTime(state.remainingSeconds);
   elements.display.textContent = timeText;
-  const modeName = MODE_NAMES[state.mode];
-  const stateIndicator = state.status === 'running' ? '▶ ' : state.status === 'paused' ? '‘ ' : '';
-  document.title = stateIndicator + timeText + ' - ' + modeName + ' | timer.viniciuscodes.com.br';
+
+  const activeLabel = state.activeView === 'pomodoro' ? MODE_NAMES[state.mode] : 'Timer Simples';
+  const stateIndicator = state.status === 'running' ? '▶ ' : state.status === 'paused' ? '⏸ ' : '';
+  document.title = stateIndicator + timeText + ' - ' + activeLabel + ' | timer.viniciuscodes.com.br';
 
   const percent = state.totalSeconds > 0
     ? Math.max(0, Math.min(100, (state.remainingSeconds / state.totalSeconds) * 100))
@@ -251,10 +260,10 @@ function updateUI() {
 
   if (state.status === 'running') {
     elements.startBtn.textContent = 'Pausar';
-    elements.cycleStatusLabel.textContent = modeName + ' em andamento';
+    elements.cycleStatusLabel.textContent = activeLabel + ' em andamento';
   } else if (state.status === 'paused') {
     elements.startBtn.textContent = 'Continuar';
-    elements.cycleStatusLabel.textContent = modeName + ' pausado';
+    elements.cycleStatusLabel.textContent = activeLabel + ' pausado';
   } else {
     elements.startBtn.textContent = 'Iniciar';
     elements.cycleStatusLabel.textContent = 'Ciclo em repouso';
@@ -298,7 +307,7 @@ function pauseTimer() {
   const now = Date.now();
   const diffMs = Math.max(0, state.targetEndTime - now);
   state.remainingSeconds = Math.ceil(diffMs / 1000);
-  releasewakeLock();
+  releaseWakeLock();
   updateUI();
 }
 
@@ -319,8 +328,63 @@ function completeTimer() {
   releaseWakeLock();
   updateUI();
   playHarmonicChime();
-  document.title = '✓ Concluído - ' + MODE_NAMES[state.mode] + ' | timer.viniciuscodes.com.br';
-  elements.cycleStatusLabel.textContent = MODE_NAMES[state.mode] + ' concluído!';
+  const label = state.activeView === 'pomodoro' ? MODE_NAMES[state.mode] : 'Timer';
+  document.title = '✓ Concluído - ' + label + ' | timer.viniciuscodes.com.br';
+  elements.cycleStatusLabel.textContent = label + ' concluído!';
+}
+
+function setView(newView) {
+  if (state.activeView === newView) return;
+  if (state.status === 'running') {
+    pauseTimer();
+  }
+
+  state.activeView = newView;
+
+  // Alternar abas principais
+  elements.viewPomodoroBtn.classList.toggle('active', newView === 'pomodoro');
+  elements.viewPomodoroBtn.setAttribute('aria-selected', newView === 'pomodoro' ? 'true' : 'false');
+  elements.viewTimerBtn.classList.toggle('active', newView === 'timer');
+  elements.viewTimerBtn.setAttribute('aria-selected', newView === 'timer' ? 'true' : 'false');
+
+  // Alternar menus de navegação de presets
+  elements.pomodoroModesNav.style.display = newView === 'pomodoro' ? 'flex' : 'none';
+  elements.simpleTimerModesNav.style.display = newView === 'timer' ? 'flex' : 'none';
+
+  if (newView === 'pomodoro') {
+    elements.manualLabel.textContent = 'Duração do modo ativo:';
+    state.totalSeconds = state.durations[state.mode];
+  } else {
+    elements.manualLabel.textContent = 'Minutos do timer:';
+    state.totalSeconds = state.simpleTimerDuration;
+  }
+
+  state.remainingSeconds = state.totalSeconds;
+  state.status = 'idle';
+  elements.manualMinInput.value = Math.floor(state.totalSeconds / 60);
+  releaseWakeLock();
+  updateUI();
+}
+
+function setSimplePreset(minutes) {
+  if (state.status === 'running') {
+    pauseTimer();
+  }
+  const sec = minutes * 60;
+  state.simpleTimerDuration = sec;
+  state.totalSeconds = sec;
+  state.remainingSeconds = sec;
+  state.status = 'idle';
+
+  elements.simpleTimerBtns.forEach(function(btn) {
+    const isCur = parseInt(btn.dataset.timerMin, 10) === minutes;
+    btn.classList.toggle('active', isCur);
+    btn.setAttribute('aria-selected', isCur ? 'true' : 'false');
+  });
+
+  elements.manualMinInput.value = minutes;
+  releaseWakeLock();
+  updateUI();
 }
 
 function setMode(newMode) {
@@ -383,9 +447,30 @@ elements.startBtn.addEventListener('click', function() {
 
 elements.resetBtn.addEventListener('click', resetTimer);
 
+if (elements.viewPomodoroBtn) {
+  elements.viewPomodoroBtn.addEventListener('click', function() {
+    setView('pomodoro');
+  });
+}
+
+if (elements.viewTimerBtn) {
+  elements.viewTimerBtn.addEventListener('click', function() {
+    setView('timer');
+  });
+}
+
 elements.modeBtns.forEach(function(btn) {
   btn.addEventListener('click', function() {
     setMode(btn.dataset.mode);
+  });
+});
+
+elements.simpleTimerBtns.forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    const min = parseInt(btn.dataset.timerMin, 10);
+    if (!isNaN(min)) {
+      setSimplePreset(min);
+    }
   });
 });
 
@@ -393,7 +478,11 @@ elements.manualMinInput.addEventListener('input', function(e) {
   const val = parseInt(e.target.value, 10);
   if (!isNaN(val) && val >= 1 && val <= 360) {
     const newSec = val * 60;
-    state.durations[state.mode] = newSec;
+    if (state.activeView === 'pomodoro') {
+      state.durations[state.mode] = newSec;
+    } else {
+      state.simpleTimerDuration = newSec;
+    }
     state.totalSeconds = newSec;
     if (state.status !== 'running') {
       state.remainingSeconds = newSec;
@@ -417,15 +506,21 @@ window.addEventListener('keydown', function(e) {
   } else if (e.key === 'r' || e.key === 'R') {
     e.preventDefault();
     resetTimer();
+  } else if (e.key === 't' || e.key === 'T') {
+    e.preventDefault();
+    setView(state.activeView === 'pomodoro' ? 'timer' : 'pomodoro');
   } else if (e.key === '1') {
     e.preventDefault();
-    setMode('focus');
+    if (state.activeView === 'pomodoro') setMode('focus');
+    else setSimplePreset(1);
   } else if (e.key === '2') {
     e.preventDefault();
-    setMode('shortBreak');
+    if (state.activeView === 'pomodoro') setMode('shortBreak');
+    else setSimplePreset(5);
   } else if (e.key === '3') {
     e.preventDefault();
-    setMode('longBreak');
+    if (state.activeView === 'pomodoro') setMode('longBreak');
+    else setSimplePreset(10);
   } else if (e.key === 'l' || e.key === 'L') {
     e.preventDefault();
     toggleLofi();

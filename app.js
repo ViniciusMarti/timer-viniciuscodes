@@ -94,13 +94,17 @@ function playHarmonicChime() {
   }
 }
 
-// --- Procedural Lofi Ambient Engine (Web Audio API) ---
-// Warm low-pass filtered continuous 7th chord progressions for cognitive focus
+// --- Lofi Ambient Audio Engine (Stream Real + Fallback Sintetizado) ---
+// Utiliza stream confiável de alta qualidade de rádio lofi 24/7 (chill lofi hiphop beats)
+const LOFI_STREAM_URL = 'https://streams.ilovemusic.de/iloveradio17.mp3'; // 24/7 Chill Lofi Beats stream
+let lofiAudioElement = null;
+
+// Progressões de acordes 7th de jazz lofi para fallback offline
 const LOFI_CHORDS = [
-  [174.61, 220.00, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
-  [164.81, 207.65, 246.94, 311.13], // Emaj7 (E3, G#3, B3, D#4)
-  [146.83, 174.61, 220.00, 261.63], // Dm7   (D3, F3, A3, C4)
-  [130.81, 164.81, 196.00, 246.94]  // Cmaj7 (C3, E3, G3, B3)
+  [174.61, 220.00, 261.63, 329.63], // Fmaj7
+  [164.81, 207.65, 246.94, 311.13], // Emaj7
+  [146.83, 174.61, 220.00, 261.63], // Dm7
+  [130.81, 164.81, 196.00, 246.94]  // Cmaj7
 ];
 let currentChordIndex = 0;
 
@@ -114,7 +118,7 @@ function ensureAudioContext() {
   }
 }
 
-function playLofiChord() {
+function playSynthesizedLofiChord() {
   if (!state.lofiPlaying || !state.audioCtx) return;
 
   const ctx = state.audioCtx;
@@ -127,19 +131,16 @@ function playLofiChord() {
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
 
-    // Warm Rhodes / Electric Piano imitation (sine + triangle harmonic)
     osc.type = i % 2 === 0 ? 'sine' : 'triangle';
-    osc.frequency.setValueAtTime(freq + (Math.random() * 0.4 - 0.2), now);
+    osc.frequency.setValueAtTime(freq, now);
 
-    // Warm Lowpass filter typical of vinyl / tape lofi
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(480, now);
-    filter.Q.setValueAtTime(1.5, now);
+    filter.frequency.setValueAtTime(650, now);
+    filter.Q.setValueAtTime(1.8, now);
 
-    // Slow gentle fade-in and long fade-out
     const chordDuration = 3.6;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.035, now + 0.9);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.4);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + chordDuration);
 
     osc.connect(filter);
@@ -152,26 +153,54 @@ function playLofiChord() {
 }
 
 function startLofi() {
+  state.lofiPlaying = true;
+  if (elements.lofiToggleBtn) {
+    elements.lofiToggleBtn.classList.add('active');
+    elements.lofiToggleBtn.setAttribute('aria-label', 'Desligar som ambiente Lofi');
+  }
+
+  // Tentar stream de rádio lofi primeiro
+  if (!lofiAudioElement) {
+    lofiAudioElement = new Audio(LOFI_STREAM_URL);
+    lofiAudioElement.crossOrigin = 'anonymous';
+    lofiAudioElement.volume = 0.55;
+    lofiAudioElement.preload = 'none';
+
+    lofiAudioElement.addEventListener('error', function() {
+      console.warn('Lofi stream inacessível, ativando sintetizador de acordes procedimental...');
+      startSynthesizedFallback();
+    });
+  }
+
+  const playPromise = lofiAudioElement.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(function(err) {
+      console.warn('Autoplay ou bloqueio de rede para stream:', err);
+      startSynthesizedFallback();
+    });
+  }
+}
+
+function startSynthesizedFallback() {
   ensureAudioContext();
   if (!state.audioCtx) return;
 
-  state.lofiPlaying = true;
   if (!state.lofiGain) {
     state.lofiGain = state.audioCtx.createGain();
-    state.lofiGain.gain.setValueAtTime(0.7, state.audioCtx.currentTime);
+    state.lofiGain.gain.setValueAtTime(0.8, state.audioCtx.currentTime);
     state.lofiGain.connect(state.audioCtx.destination);
   }
 
-  elements.lofiToggleBtn.classList.add('active');
-  elements.lofiToggleBtn.setAttribute('aria-label', 'Desligar som ambiente Lofi');
-
-  playLofiChord();
+  playSynthesizedLofiChord();
   if (state.lofiInterval) clearInterval(state.lofiInterval);
-  state.lofiInterval = setInterval(playLofiChord, 3400);
+  state.lofiInterval = setInterval(playSynthesizedLofiChord, 3500);
 }
 
 function stopLofi() {
   state.lofiPlaying = false;
+  if (lofiAudioElement) {
+    lofiAudioElement.pause();
+  }
   if (state.lofiInterval) {
     clearInterval(state.lofiInterval);
     state.lofiInterval = null;

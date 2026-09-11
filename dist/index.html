@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index-DF9BefRU.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Cri0zyqW.css">
+  <script type="module" crossorigin src="/assets/index-DXs5dWeb.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-V3fttc7-.css">
 </head>
 <body>
   <!-- Cabeçalho Minimalista -->
@@ -70,8 +70,21 @@
   <main>
     <!-- Seletor de Telas (Pomodoro vs Timer Simples) -->
     <div class="view-switcher" role="tablist" aria-label="Tipo de Temporizador">
-      <button role="tab" id="view-pomodoro-btn" class="view-btn active" aria-selected="true">🍅 Pomodoro</button>
-      <button role="tab" id="view-timer-btn" class="view-btn" aria-selected="false">⏱️ Timer Simples</button>
+      <button role="tab" id="view-pomodoro-btn" class="view-btn active" aria-selected="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="13" r="8"></circle>
+          <path d="M12 9V5"></path>
+          <path d="M9 5c1 1 2 1 3 0s2 1 3 0"></path>
+        </svg>
+        <span>Pomodoro</span>
+      </button>
+      <button role="tab" id="view-timer-btn" class="view-btn" aria-selected="false">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Timer</span>
+      </button>
     </div>
 
     <!-- TELA 1: Seleção de Modos Pomodoro (Ciclos de Foco e Pausas) -->

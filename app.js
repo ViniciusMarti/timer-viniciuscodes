@@ -154,30 +154,36 @@ function playSynthesizedLofiChord() {
 
 function startLofi() {
   state.lofiPlaying = true;
+  ensureAudioContext();
+
   if (elements.lofiToggleBtn) {
     elements.lofiToggleBtn.classList.add('active');
     elements.lofiToggleBtn.setAttribute('aria-label', 'Desligar som ambiente Lofi');
   }
 
   // Tentar stream de rádio lofi primeiro
-  if (!lofiAudioElement) {
-    lofiAudioElement = new Audio(LOFI_STREAM_URL);
-    lofiAudioElement.crossOrigin = 'anonymous';
-    lofiAudioElement.volume = 0.55;
-    lofiAudioElement.preload = 'none';
+  try {
+    if (!lofiAudioElement) {
+      lofiAudioElement = new Audio(LOFI_STREAM_URL);
+      lofiAudioElement.volume = 0.5;
+      lofiAudioElement.preload = 'auto';
 
-    lofiAudioElement.addEventListener('error', function() {
-      console.warn('Lofi stream inacessível, ativando sintetizador de acordes procedimental...');
-      startSynthesizedFallback();
-    });
-  }
+      lofiAudioElement.addEventListener('error', function() {
+        console.warn('Lofi stream inacessível, alternando para síntese procedimental...');
+        startSynthesizedFallback();
+      });
+    }
 
-  const playPromise = lofiAudioElement.play();
-  if (playPromise !== undefined) {
-    playPromise.catch(function(err) {
-      console.warn('Autoplay ou bloqueio de rede para stream:', err);
-      startSynthesizedFallback();
-    });
+    const playPromise = lofiAudioElement.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function(err) {
+        console.warn('Stream bloqueado pelo navegador/CORS, iniciando sintetizador:', err);
+        startSynthesizedFallback();
+      });
+    }
+  } catch (e) {
+    console.warn('Erro ao inicializar elemento de áudio:', e);
+    startSynthesizedFallback();
   }
 }
 
@@ -199,7 +205,9 @@ function startSynthesizedFallback() {
 function stopLofi() {
   state.lofiPlaying = false;
   if (lofiAudioElement) {
-    lofiAudioElement.pause();
+    try {
+      lofiAudioElement.pause();
+    } catch (e) {}
   }
   if (state.lofiInterval) {
     clearInterval(state.lofiInterval);
